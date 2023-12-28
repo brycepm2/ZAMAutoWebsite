@@ -31,28 +31,70 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script type="text/javascript">
       $(function() {
-          $('a#runScript').bind('click', function() {
-              document.getElementById("runStatus").textContent="Running!!!"
-              $.getJSON('/callPython', {
-                  email: $('input[id="email"]').val(),
-                  prompt: $('textarea[id="prompt"]').val(),
-                  reportNum: $('input[id="reportNum"]').val(),
-                  rfpStart: $('input[id="rfpStart"]').val(),
-                  rfpEnd: $('input[id="rfpEnd"]').val(),
-                  useGPT4: $('input[id="gpt4Box"]').prop("checked")
-              }, function(data) {
-                  $("#runStatus").text("Done!!!");
+          $('#runScript').bind('click', function() {
+                  storeRFPCall();
+                  return false;
+              })
+              .bind('click', function() {
+                  doPoll();
+                  return false;
+              });
+      });
+    </script>
+    <script>
+      function storeRFPCall(){
+          $( '#dataStatus' ).text( "Unsaved" );
+          $.post('/stashRFPData',
+                 {
+                     id: {{ job_id|tojson }},
+                     promptIn: $('textarea[id="prompt"]').val(),
+                     reportNumIn: $('input[id="reportNum"]').val(),
+                     rfpStartIn: $('input[id="rfpStart"]').val(),
+                     rfpEndIn: $('input[id="rfpEnd"]').val(),
+                     useGPT4: $('input[id="gpt4Box"]').prop("checked")
+                 },
+                 function(data) {
+                     $( '#dataStatus' ).text( data.status );
+                 });
+      }
+    </script>
+    <script>
+      function doPoll(){
+          $.post('/query', {
+              id: {{ job_id|tojson }},
+              rfpStatus: $( '#dataStatus' ).text(),
+          }, function(data) {
+              $( '#runStatus' ).text( data.state );
+              $( '#result' ).text( data.result );
+              if (data.result == 0) {
+                  // wait 2 seconds and call again
+                  setTimeout(doPoll, 2000);
+              } else {
+                  $( '#result' ).text( data.result );
+                  var runStatus = $('#runStatus').text()
+                  if ( runStatus == "Done!!!") {
+                      writePDF();
+                  }
+              }
+          });
+      }
+    </script>
+    <script>
+      function writePDF(){
+          $.get("https://brycepm2.pythonanywhere.com/static/pdfOut/RFPSummary.pdf")
+              .done(function() { 
                   var clone = document.getElementById("pdfOut").cloneNode(true);
                   clone.data = "/static/pdfOut/RFPSummary.pdf";
                   var placeHolder = document.getElementById("pdfOut").parentNode;
                   placeHolder.removeChild(document.getElementById("pdfOut"));
                   placeHolder.appendChild(clone);
-              });
-              return false;
-          });
-      });
+              }).fail(function() { 
+                  // wait 1 seconds and try again
+                  setTimeout(writePDF(), 1000);
+              })
+      };
     </script>
-</head>
+    </head>
 <body>
   <form>
     <div>
@@ -87,7 +129,11 @@
       <a href=# id=runScript><button class='btn btn-default'>Submit</button></a>
     </div>
 
-    <p id=runStatus></p>
+    <div class="content">
+      <p>Data status: <span id="dataStatus">Unsaved</span></p>
+      <p>Status of your request: <span id="runStatus"></span></p>
+      <p>Time for request: <span id="result">?</span> seconds</p>
+  </div>
     <h1>PDF Output</h1>
     <object id="pdfOut" data="/static/pdfOut/RFPSummary.pdf" type="application/pdf" style="width:100%;height:350px;">
       PDF cannot be displayed

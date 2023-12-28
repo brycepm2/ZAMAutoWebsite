@@ -4,6 +4,7 @@ from selenium.webdriver.common.by import By
 import time
 from datetime import date
 import sys
+import os
 
 tgrwaURL = 'https://mybidmatch.outreachsystems.com/go?sub=0F7D0F07-33E5-427C-95F8-8C7F014C8924'
 
@@ -102,7 +103,7 @@ from openai import OpenAI
 
 client = OpenAI(
     # defaults to os.environ.get("OPENAI_API_KEY")
-    api_key='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',
+    api_key=os.getenv("OPENAI_API_KEY"),
 )
 
 def callGPT(prompt, model):
@@ -161,7 +162,6 @@ def writeOutput(doc, rfpTitle, output, rfpLink=None):
             doc.append("\n")
             doc.append("\n")
             doc.append(hyperlink(rfpLink, "Link to RFP"))
-    print('Done')
 
 def probeRFPs(rfpTexts, basePrompt, model):
     # make latex doc to store output
@@ -200,9 +200,10 @@ def probeRFPs(rfpTexts, basePrompt, model):
     writeOutput(doc, "Prompt", basePrompt)
     writeOutput(doc, "Model", model)
     # generate pdf output
-    doc.generate_pdf('./ZAMAutoWebsite/assets/pdfOut/RFPSummary', clean_tex=False)
+    doc.generate_pdf('/home/brycepm2/ZAMAutoWebsite/assets/pdfOut/RFPSummary', clean_tex=False)
     print('Cost for all RFPs: ', allRFPCost)
-    print('Done!!!')
+    print('Done with analysis!!!')
+    return allRFPCost
 
 def main():
     old_stdout = sys.stdout

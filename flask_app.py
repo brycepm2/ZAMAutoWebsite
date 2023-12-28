@@ -7,77 +7,107 @@ import datetime
 import rfpReaderBackend
 import sys
 import os
+from time import sleep
 
 app = Flask(__name__)
-# app.config.from_object('config')
-# db = SQLAlchemy(app)
+app.config.from_object('config')
+db = SQLAlchemy(app)
 
 @app.route('/')
 def home():
-    # ip = request.headers.get("X-Real-Ip", "")
-    # now = datetime.datetime.now(datetime.timezone.utc)
-    # jobID = f"{ip}{now}"
-    # data = Job(slug=jobID)
-    # db.session.add(data)
-    # db.session.commit()
+    ip = request.headers.get("X-Real-Ip", "")
+    now = datetime.datetime.now(datetime.timezone.utc)
+    jobID = f"{ip}{now}"
+    data = Job(slug=jobID)
+    db.session.add(data)
+    db.session.commit()
     try :
         os.remove("./ZAMAutoWebsite/assets/pdfOut/RFPSummary.pdf")
     except OSError as e:
         print("PDF already gone!!!")
-    return render_template('index.html') #, job_id = jobID)
+    return render_template('index.html', job_id = jobID)
 
-@app.route('/callPython', methods=["GET","POST"])
-def callPython():
-    # print to log file instead of stdout
-    old_stdout = sys.stdout
-    logFile = open("./ZAMAutoWebsite/RFPRun.log", 'w')
-    sys.stdout = logFile
-    maxNumRFPs = 30
+@app.route("/stashRFPData", methods=["GET", "POST"])
+def stashRFPData():
+    # make jobID
     try:
-        email = request.args.get('email', 'empty', type=str)
-        prompt = request.args.get('prompt', 'empty', type=str)
-        reportNum= request.args.get('reportNum', 1, type=int)
-        rfpStart = request.args.get('rfpStart', 1, type=int)
-        rfpEnd = request.args.get('rfpEnd', 40, type=int)
+        # get data from form
+        rfpJobID = request.form["id"]
+        prompt = request.form["promptIn"]
+        reportNum = request.form["reportNumIn"]
+        rfpStart = request.form["rfpStartIn"]
+        rfpEnd = request.form["rfpEndIn"]
+        useGPT4 = True if request.form["useGPT4"] == 'true' else False
         if rfpStart > rfpEnd and rfpEnd - rfpStart > maxNumRFPs:
             print("rfpRange is off, will correct in backend!!!")
-        useGPT4 = True if request.args.get('useGPT4', type=str) == 'true' else False
-        rfpText = rfpReaderBackend.getRFPReport(reportNum, rfpStart, rfpEnd)
-        if rfpText != False:
-            if (useGPT4 == True):
-                model = 'gpt-4-1106-preview'
-            else:
-                model = 'gpt-3.5-turbo-1106'
-            print("Probing RFPs")
-            print("using: ", model)
-            rfpReaderBackend.probeRFPs(rfpText, prompt, model)
-            sys.stdout = old_stdout
-            logFile.close()
-            print("Done")
-            return jsonify(emailOut=email, promptOut=prompt)
-        else:
-            return jsonify(emailOut=email, promptOut="No opportunities in this report!!!")
+        # create jobDatabase
+        data = rfpJob(slug=rfpJobID, prompt=prompt,
+                      reportNum=reportNum, rfpStart=rfpStart,
+                      rfpEnd=rfpEnd, useGPT4=useGPT4)
+        db.session.add(data)
+        db.session.commit()
     except Exception as e:
-        sys.stdout = old_stdout
-        logFile.close()
         return jsonify(result=str(e))
-
-# @app.route("/query", methods=["POST"])
-# def query():
-#     job_id = request.form["id"]
-#     data = Job.query.filter_by(slug=job_id).first()
-#     return jsonify(
-#         {
-#             "state": data.state,
-#             "result": data.result,
-#         }
-#     )
+    try :
+        os.remove("./ZAMAutoWebsite/assets/pdfOut/RFPSummary.pdf")
+    except OSError as e:
+        print("PDF already gone!!!")
+    return jsonify(
+        {
+        'status': "Saved"
+        }
+    )
 
 
-# class Job(db.Model):
-#     __tablename__ = "jobs"
-#     id = db.Column(db.Integer, primary_key=True)
-#     slug = db.Column(db.String(64), nullable=False)
-#     state = db.Column(db.String(10), nullable=False, default="queued")
-#     result = db.Column(db.Integer, default=0)
 
+@app.route("/query", methods=["POST"])
+def query():
+    job_id = request.form["id"]
+    rfpStatus = request.form["rfpStatus"]
+    if rfpStatus == "Saved":
+        jobs = rfpJob.query.filter_by(slug=job_id).all()
+        # if there are no running jobs, use last 
+        data = jobs[-1]
+        for iJob in jobs:
+            if iJob.state != 'Done!!!':
+                # if this job is not done, use that
+                data = iJob
+                break
+            else:
+                # if this job is done go to the next one
+                continue
+        out = jsonify(
+            {
+                "state": data.state,
+                "result": data.result,
+            }
+        )
+    else:
+        out = jsonify(
+            {
+                "state": "",
+                "result": 0,
+            }
+        )
+    return out
+        
+ 
+class rfpJob(db.Model):
+    __tablename__ = "rfpRun"
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(64), nullable=False)
+    state = db.Column(db.String(64), nullable=False, default="Queued")
+    prompt = db.Column(db.Text, nullable=False)
+    reportNum = db.Column(db.Integer, default=1)
+    rfpStart = db.Column(db.Integer, default=1)
+    rfpEnd = db.Column(db.Integer, default=1)
+    useGPT4 = db.Column(db.Boolean, default=False)
+    totalCost = db.Column(db.Float, default=0.0)
+    result = db.Column(db.Integer, default=0)
+
+class Job(db.Model):
+    __tablename__ = "jobs"
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(64), nullable=False)
+    state = db.Column(db.String(64), nullable=False, default="queued")
+    result = db.Column(db.Integer, default=0)
