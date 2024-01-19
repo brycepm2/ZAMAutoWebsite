@@ -43,16 +43,17 @@ def getRFPReport(reportNum, rfpNumStart, rfpNumEnd):
         rfpText = []
         # if no range specified do all rfps
         print("Setting rfpRange")
-        # BPM: Capping number for now to avoid timeOut
         # Case1: range is longer than number of RFPs
         if int(numRFPs) < (rfpNumEnd - rfpNumStart) + 1:
             rfpRange = [iRFP for iRFP in range(1,int(numRFPs)+1)]
-        elif (rfpNumEnd - rfpNumStart) > 30:
-            # case 2: range is bigger than 30, cap it at 30
-            rfpRange = [iRFP for iRFP in range(rfpNumStart,rfpNumStart+31)]
+        elif rfpNumStart == -1 and rfpNumEnd == -1:
+            # run all RFPs from this report
+            rfpRange = [iRFP for iRFP in range(1,int(numRFPs)+1)]
         else:
             # case 3: range works as is
             rfpRange = [iRFP for iRFP in range(rfpNumStart,rfpNumEnd+1)]
+        rfpNumStart = rfpRange[0]
+        rfpNumEnd = rfpRange[-1]
 
         for rfpNum in rfpRange:
             rfpTitle, rfpBody, rfpKeyWord, rfpLink = scrapeRFP(driver, rfpNum)
@@ -62,7 +63,7 @@ def getRFPReport(reportNum, rfpNumStart, rfpNumEnd):
 
         driver.quit()
         print("Done textScraping!!!")
-        return rfpText
+        return rfpText, rfpNumStart, rfpNumEnd
 
 def scrapeRFP(driver, rfpNum):
     # get desired entry of table of RFPs
@@ -163,7 +164,7 @@ def writeOutput(doc, rfpTitle, output, rfpLink=None):
             doc.append("\n")
             doc.append(hyperlink(rfpLink, "Link to RFP"))
 
-def probeRFPs(rfpTexts, basePrompt, model):
+def probeRFPs(rfpTexts, basePrompt, model, outPdfFullPath):
     # make latex doc to store output
     print("Probing RFPs")
     geometryOptions = {"tmargin" : "1cm", "lmargin": "1cm"}
@@ -200,7 +201,7 @@ def probeRFPs(rfpTexts, basePrompt, model):
     writeOutput(doc, "Prompt", basePrompt)
     writeOutput(doc, "Model", model)
     # generate pdf output
-    doc.generate_pdf('/home/brycepm2/ZAMAutoWebsite/assets/pdfOut/RFPSummary', clean_tex=False)
+    doc.generate_pdf(outPdfFullPath, clean_tex=False)
     print('Cost for all RFPs: ', allRFPCost)
     print('Done with analysis!!!')
     return allRFPCost

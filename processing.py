@@ -43,7 +43,7 @@ def runJob(slug, prompt, reportNum, rfpStart, rfpEnd, useGPT4):
     # start clock
     sTime = time.time()
     # scrape desired rfp text
-    rfpText = rfpReaderBackend.getRFPReport(reportNum, rfpStart, rfpEnd)
+    rfpText, rfpStart, rfpEnd = rfpReaderBackend.getRFPReport(reportNum, rfpStart, rfpEnd)
     if rfpText != False:
         if (useGPT4 == True):
             model = 'gpt-4-1106-preview'
@@ -51,7 +51,8 @@ def runJob(slug, prompt, reportNum, rfpStart, rfpEnd, useGPT4):
             model = 'gpt-3.5-turbo-1106'
         print("Probing RFPs", flush=True)
         print("using: ", model)
-        totalCost = rfpReaderBackend.probeRFPs(rfpText, prompt, model)
+        outPdfFullPath = '/home/brycepm2/ZAMAutoWebsite/assets/pdfOut/RFPSummary'
+        totalCost = rfpReaderBackend.probeRFPs(rfpText, prompt, model, outPdfFullPath)
         eTime = time.time()
         result = eTime - sTime
         state = "Done!!!"
@@ -62,14 +63,16 @@ def runJob(slug, prompt, reportNum, rfpStart, rfpEnd, useGPT4):
         print("There are no RFPs in this report!!!")
         result = -1
         state = "No RFPs in Report!!!"
-    updateJob(slug, state, totalCost, result)
+    updateJob(slug, rfpStart, rfpEnd, state, totalCost, result)
     return 0
 
-def updateJob(slug, state, totalCost, result):
+def updateJob(slug, rfpStart, rfpEnd, state, totalCost, result):
     with Session.begin() as session:
         data = session.query(rfpJob).filter_by(slug=slug).all()
         # only work on most recent job
         job = data[-1]
+        job.rfpStart = rfpStart
+        job.rfpEnd = rfpEnd
         job.state = "Done!!!"
         job.totalCost = totalCost
         job.result = result
