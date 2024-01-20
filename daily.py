@@ -86,9 +86,9 @@ def sendMail(send_from, send_to, subject, text, files=None,
     smtp.close()
 
 fromEmail = "brycepm2@gmail.com"
-toEmail = ["brycepm2@illinois.edu"]
-today = datetime.date.today()
-d1 = today.strftime("%m/%d/%Y")
+toEmail = ["dnickell@tgrwa.com","rreckers@tgrwa.com","emondragon@tgrwa.com","brycepm2@gmail.com"]
+todayChicago = (datetime.date.today() - datetime.timedelta(days=1))
+d1 = todayChicago.strftime("%m/%d/%Y")
 emailSubject = f"RFP Daily Report - {d1}"
 user = "brycepm2@gmail.com"
 pwd = os.getenv("EMAIL_APP_PWD")
@@ -99,7 +99,7 @@ def runDailyJob(slug, prompt, reportNum, rfpStart, rfpEnd, useGPT4):
     # scrape desired rfp text
     rfpText, rfpStart, rfpEnd = rfpReaderBackend.getRFPReport(reportNum, rfpStart, rfpEnd)
     emailText = ""
-    outPdfFullPath = '/home/brycepm2/ZAMAutoWebsite/DailyReports/RFPReport_'+slug[0:20]
+    outPdfFullPath = f'/home/brycepm2/ZAMAutoWebsite/DailyReports/RFPReport_{todayChicago}'
     if rfpText != False:
         if (useGPT4 == True):
             model = 'gpt-4-1106-preview'
