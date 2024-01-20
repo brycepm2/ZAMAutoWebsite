@@ -97,7 +97,7 @@ def runDailyJob(slug, prompt, reportNum, rfpStart, rfpEnd, useGPT4):
     # start clock
     sTime = time.time()
     # scrape desired rfp text
-    rfpText, rfpStart, rfpEnd = rfpReaderBackend.getRFPReport(4, rfpStart, rfpEnd)
+    rfpText, rfpStart, rfpEnd = rfpReaderBackend.getRFPReport(reportNum, rfpStart, rfpEnd)
     emailText = ""
     outPdfFullPath = '/home/brycepm2/ZAMAutoWebsite/DailyReports/RFPReport_'+slug[0:20]
     if rfpText != False:

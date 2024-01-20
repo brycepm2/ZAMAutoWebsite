@@ -32,13 +32,11 @@
     <script type="text/javascript">
       $(function() {
           $('#runScript').bind('click', function() {
-                  storeRFPCall();
-                  return false;
-              })
-              .bind('click', function() {
-                  doPoll();
-                  return false;
-              });
+              addRunData();
+              storeRFPCall();
+              doPoll();
+              return false;
+          });
       });
     </script>
     <script>
@@ -94,6 +92,63 @@
               })
       };
     </script>
+    <script>
+      function addRunData(){
+          var testButArea = document.getElementById("testButtonArea")
+          var htmlDataStat = "<p>Data status: <span id='dataStatus'>Unsaved</span></p>"
+          testButArea.innerHTML = htmlDataStat
+          var htmlRunStat = "<p>Status of your request: <span id='runStatus'></span></p>"
+          testButArea.insertAdjacentHTML('beforeend',htmlRunStat)
+          var htmlRunTime = "<p>Time for request: <span id='result'>?</span> seconds</p>"
+          testButArea.insertAdjacentHTML('beforeend',htmlRunTime)
+      };
+    </script>
+    <script>
+      $(function() {
+          $('#viewDailyPrompt').bind('click', function() {
+              populateButtonContext();
+              getDailyPrompt();
+              return false;
+          });
+      });
+    </script>
+    <script>
+      function getDailyPrompt(){
+          $.post('/queryDailyPrompt', function(data) {
+              $( '#dailyPrompt' ).val( data.dailyPrompt );
+          });
+      }
+    </script>
+    <script>
+      function populateButtonContext(){
+          var dailyTextArea = [
+              '<textarea id="dailyPrompt" rows="10" cols="100" readonly>Working!!!</textarea>'
+          ].join();
+          document.getElementById("testButtonArea").innerHTML = dailyTextArea;
+      };
+    </script>
+    <script>
+      $(function() {
+          $('#setDailyPrompt').bind('click', {
+              promptIn: $('textarea[id="prompt"]').val()
+          }, function() {
+              populateButtonContext();
+              setDBDailyPrompt();
+              return false;
+          });
+      });
+    </script>
+    <script>
+      function setDBDailyPrompt(){
+          $.post('/setDBDailyPrompt',
+                 {
+                     promptIn: $('textarea[id="prompt"]').val(),
+                 },
+                 function(data) {
+                     $( '#dailyPrompt' ).val( data.dailyPrompt );
+                 });
+      }
+    </script>
     </head>
 <body>
   <form>
@@ -101,11 +156,6 @@
       <label for="prompt">Desired Prompt:</label>
       <textarea id="prompt" rows="14" cols="100">Input your desired prompt here. Note that the RFP text will be automatically added on each run.
       </textarea>
-    </div>
-
-    <div>
-      <label for="email">Email (currently not emailing):</label>
-      <input type="text" id="email">
     </div>
 
     <div>
@@ -126,16 +176,15 @@
     </div>
 
     <div>
-      <a href=# id=runScript><button class='btn btn-default'>Submit</button></a>
+      <a href=# id="runScript"><button class='btn btn-default'>Submit</button></a>
+      <a href=# id="viewDailyPrompt"><button class='btn btn-default'>View Daily Prompt</button></a>
+      <a href=# id="setDailyPrompt"><button class='btn btn-default'>Set Daily Prompt</button></a>
     </div>
 
-    <div class="content">
-      <p>Data status: <span id="dataStatus">Unsaved</span></p>
-      <p>Status of your request: <span id="runStatus"></span></p>
-      <p>Time for request: <span id="result">?</span> seconds</p>
-  </div>
+    <div id="testButtonArea">
+    </div>
     <h1>PDF Output</h1>
-    <object id="pdfOut" data="/static/pdfOut/RFPSummary.pdf" type="application/pdf" style="width:100%;height:350px;">
+    <object id="pdfOut" data="/static/pdfOut/RFPSummary.pdf" type="application/pdf" style="width:100%;height:500px;">
       PDF cannot be displayed
     </object>
   </form>

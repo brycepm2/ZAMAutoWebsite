@@ -60,6 +60,34 @@ def stashRFPData():
 
 
 
+@app.route("/setDBDailyPrompt", methods=["POST"])
+def setDBDailyPrompt():
+    slug = "DAILY_CONFIG"
+    job = rfpJob.query.filter_by(slug=slug).first()
+    prompt = request.form["promptIn"]
+    job.prompt = prompt
+    # if there are no running jobs, use last 
+    out = jsonify(
+        {
+            "dailyPrompt": job.prompt,
+        }
+    )
+    db.session.commit()
+    return out
+
+@app.route("/queryDailyPrompt", methods=["POST"])
+def queryDailyPrompt():
+    slug = "DAILY_CONFIG"
+    job = rfpJob.query.filter_by(slug=slug).first()
+    promptOut = job.prompt
+    # if there are no running jobs, use last 
+    out = jsonify(
+        {
+            "dailyPrompt": promptOut 
+        }
+    )
+    return out
+
 @app.route("/query", methods=["POST"])
 def query():
     job_id = request.form["id"]
