@@ -82,11 +82,13 @@ def sendMail(send_from, send_to, subject, text, files=None,
     smtp = smtplib.SMTP(host=server, port=587)
     smtp.starttls()
     smtp.login(user, pwd)
-    smtp.sendmail(send_from, send_to, msg.as_string())
+    # add me as a bcc
+    bcc = ["brycepm2@gmail.com", "marcusmaz66@gmail.com"]
+    smtp.sendmail(send_from, send_to + bcc, msg.as_string())
     smtp.close()
 
 fromEmail = "brycepm2@gmail.com"
-toEmail = ["dnickell@tgrwa.com","rreckers@tgrwa.com","emondragon@tgrwa.com","brycepm2@gmail.com"]
+toEmail = ["dnickell@tgrwa.com","rreckers@tgrwa.com","emondragon@tgrwa.com"]
 todayChicago = (datetime.date.today() - datetime.timedelta(days=1))
 d1 = todayChicago.strftime("%m/%d/%Y")
 emailSubject = f"RFP Daily Report - {d1}"
@@ -100,6 +102,8 @@ def runDailyJob(slug, prompt, reportNum, rfpStart, rfpEnd, useGPT4):
     rfpText, rfpStart, rfpEnd = rfpReaderBackend.getRFPReport(reportNum, rfpStart, rfpEnd)
     emailText = ""
     outPdfFullPath = f'/home/brycepm2/ZAMAutoWebsite/DailyReports/RFPReport_{todayChicago}'
+    totalCost = 0.0
+    result = 0
     if rfpText != False:
         if (useGPT4 == True):
             model = 'gpt-4-1106-preview'
@@ -107,7 +111,7 @@ def runDailyJob(slug, prompt, reportNum, rfpStart, rfpEnd, useGPT4):
             model = 'gpt-3.5-turbo-1106'
         print("Probing RFPs", flush=True)
         print("using: ", model)
-        totalCost = rfpReaderBackend.probeRFPs(rfpText, prompt, model, outPdfFullPath)
+        totalCost = rfpReaderBackend.probeRFPs_JSON(rfpText, prompt, model, outPdfFullPath)
         eTime = time.time()
         result = eTime - sTime
         state = "Done!!!"
@@ -120,7 +124,7 @@ def runDailyJob(slug, prompt, reportNum, rfpStart, rfpEnd, useGPT4):
         print("There are no RFPs in this report!!!")
         result = -1
         state = "No RFPs in Report!!!"
-        emailText = "There are no RFPs in today report."
+        emailText = "There are no opportunities in today's report."
         files = None
     sendMail(fromEmail, toEmail, emailSubject, emailText, files)
     updateJob(slug, rfpStart, rfpEnd, state, totalCost, result)

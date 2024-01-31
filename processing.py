@@ -52,7 +52,7 @@ def runJob(slug, prompt, reportNum, rfpStart, rfpEnd, useGPT4):
         print("Probing RFPs", flush=True)
         print("using: ", model)
         outPdfFullPath = '/home/brycepm2/ZAMAutoWebsite/assets/pdfOut/RFPSummary'
-        totalCost = rfpReaderBackend.probeRFPs(rfpText, prompt, model, outPdfFullPath)
+        totalCost = rfpReaderBackend.probeRFPs_JSON(rfpText, prompt, model, outPdfFullPath)
         eTime = time.time()
         result = eTime - sTime
         state = "Done!!!"
